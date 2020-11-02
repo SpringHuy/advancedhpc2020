@@ -1,0 +1,54 @@
+
+I/How you implement the conversion
+
+change in the void Labwork::labwork1_OpenMP() method as below:
+
+void Labwork::labwork1_OpenMP() {
+    int pixelCount = inputImage->width * inputImage->height;
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
+    // do something here
+     omp_set_num_threads(16);
+    
+        for (int j = 0; j < 100; j++) {     // let's do it 100 times, otherwise it's too fast!        
+        #pragma omp schedule dynamic
+            for (int i = 0; i < pixelCount; i++) {
+                outputImage[i * 3] = (char) (((int) inputImage->buffer[i * 3] + (int) inputImage->buffer[i * 3 + 1] +
+                                            (int) inputImage->buffer[i * 3 + 2]) / 3);
+                outputImage[i * 3 + 1] = outputImage[i * 3];
+                outputImage[i * 3 + 2] = outputImage[i * 3];
+            }
+        }
+}
+
+
+II/ What’s the speedup?
+
+4 threads: Speedup about 4 times
+
+student4@ictserver2:/storage/student4/advancedhpc2020/labwork_2/labwork/build$ ./labwork 1 ../data/cloud.jpeg 
+USTH ICT Master 2018, Advanced Programming for HPC.
+Warming up...
+Starting labwork 1
+labwork 1 CPU ellapsed 266.4ms
+labwork 1 CPU openmp ellapsed 62.8ms
+labwork 1 ellapsed 69.5ms
+
+
+8 threads: Speedup about 9 times
+student4@ictserver2:/storage/student4/advancedhpc2020/labwork_2/labwork/build8$ ./labwork 1 ../data/cloud.jpeg 
+USTH ICT Master 2018, Advanced Programming for HPC.
+Warming up...
+Starting labwork 1
+labwork 1 CPU ellapsed 261.4ms
+labwork 1 CPU openmp ellapsed 37.8ms
+labwork 1 ellapsed 44.4ms
+
+
+16 threads: Speedup about 9 times
+student4@ictserver2:/storage/student4/advancedhpc2020/labwork_2/labwork/build16$ ./labwork 1 ../data/cloud.jpeg 
+USTH ICT Master 2018, Advanced Programming for HPC.
+Warming up...
+Starting labwork 1
+labwork 1 CPU ellapsed 277.9ms
+labwork 1 CPU openmp ellapsed 32.2ms
+labwork 1 ellapsed 38.5ms
