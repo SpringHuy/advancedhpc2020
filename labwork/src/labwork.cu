@@ -99,6 +99,7 @@ void Labwork::labwork1_CPU() {
     outputImage = static_cast<char *>(malloc(pixelCount * 3));
     for (int j = 0; j < 100; j++) {     // let's do it 100 times, otherwise it's too fast!
         for (int i = 0; i < pixelCount; i++) {
+            int nDevices = 0;
             outputImage[i * 3] = (char) (((int) inputImage->buffer[i * 3] + (int) inputImage->buffer[i * 3 + 1] +
                                           (int) inputImage->buffer[i * 3 + 2]) / 3);
             outputImage[i * 3 + 1] = outputImage[i * 3];
@@ -152,32 +153,60 @@ int getSPcores(cudaDeviceProp devProp) {
     return cores;
 }
 
-void Labwork::labwork2_GPU() {
-    int nDevices = 0;
-    // get all devices
-    cudaGetDeviceCount(&nDevices);
-    printf("Number total of GPU : %d\n\n", nDevices);
-    for (int i = 0; i < nDevices; i++){
-        // get informations from individual device
-        cudaDeviceProp prop;
-        cudaGetDeviceProperties(&prop, i);
-        // something more here
-    }
+// mplement Labwork::labwork2_GPU() to extract
+// information about your GPU(s)
+// • Device name
+// • Core info: clock rate, core counts, multiprocessor count,
+// wrap size
+// • Memory info: clock rate, bus width and [optional] bandwidth
+// • Hint
+// • [Optional] Use cudaGetDeviceCount() to get number of
+// NVIDIA GPUs, if you have more than one ©
+// • Use cudaGetDeviceProperties(*cudaDeviceProp
+// propOut, int deviceId)
+// • Examine cudaDeviceProp struc
 
+void Labwork::labwork2_GPU() {
+    // get all devices
+}
+
+__global__ void grayscale(uchar3 *input, uchar3 *output) {
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    output[tid].x = (input[tid].x + input[tid].y +
+    input[tid].z) / 3;
+    output[tid].z = output[tid].y = output[tid].x;
 }
 
 void Labwork::labwork3_GPU() {
+    printf("1\n");
     // Calculate number of pixels
+    int pixelCount = inputImage->width * inputImage->height;
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
+    uchar3* dev_in = nullptr;
+    uchar3* dev_out = nullptr;
+    printf("2\n");
 
     // Allocate CUDA memory    
+    cudaMalloc(&dev_in, pixelCount*3);
+    cudaMalloc(&dev_out, pixelCount*3);
 
+    printf("4\n");
     // Copy CUDA Memory from CPU to GPU
-
+    cudaMemcpy(dev_in, inputImage->buffer, pixelCount*3, cudaMemcpyHostToDevice);
+    printf("5\n");
     // Processing
-
+    int blockSize = 64;
+    int numBlock = pixelCount / blockSize;
+    grayscale<<<numBlock, blockSize>>>(dev_in, dev_out);
+    printf("6\n");
     // Copy CUDA Memory from GPU to CPU
-
+    cudaMemcpy(dev_out, outputImage, pixelCount*3, cudaMemcpyDeviceToHost);
+    printf("7\n");
     // Cleaning
+    cudaFree(dev_in);
+    cudaFree(dev_out);
+    //free(outputImage);
+    printf("8\n");
 }
 
 void Labwork::labwork4_GPU() {
