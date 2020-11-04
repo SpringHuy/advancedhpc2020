@@ -171,9 +171,10 @@ void Labwork::labwork2_GPU() {
 }
 
 __global__ void grayscale(uchar3 *input, uchar3 *output) {
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    output[tid].x = (input[tid].x + input[tid].y +
-    input[tid].z) / 3;
+    int tidx = threadIdx.x + blockIdx.x * blockDim.x;
+    int tidy = threadIdx.y + blockIdx.y * blockDim.y;
+    int tid = tidy*(blockDim.x*gridDim.x) + tidx;
+    output[tid].x = (input[tid].x + input[tid].y + input[tid].z) / 3;
     output[tid].z = output[tid].y = output[tid].x;
 }
 
@@ -200,7 +201,7 @@ void Labwork::labwork3_GPU() {
     grayscale<<<numBlock, blockSize>>>(dev_in, dev_out);
     printf("6\n");
     // Copy CUDA Memory from GPU to CPU
-    cudaMemcpy(dev_out, outputImage, pixelCount*3, cudaMemcpyDeviceToHost);
+    cudaMemcpy( outputImage, dev_out, pixelCount*3, cudaMemcpyDeviceToHost);
     printf("7\n");
     // Cleaning
     cudaFree(dev_in);
@@ -210,6 +211,52 @@ void Labwork::labwork3_GPU() {
 }
 
 void Labwork::labwork4_GPU() {
+    printf("1\n");
+    // Calculate number of pixels
+    int pixelCount = inputImage->width * inputImage->height;
+    outputImage = static_cast<char *>(malloc(pixelCount * 3));
+    uchar3* dev_in = nullptr;
+    uchar3* dev_out = nullptr;
+    printf("2\n");
+
+    // Allocate CUDA memory    
+    cudaMalloc(&dev_in, pixelCount*3);
+    cudaMalloc(&dev_out, pixelCount*3);
+
+    printf("3\n");
+    // Copy CUDA Memory from CPU to GPU
+    cudaMemcpy(dev_in, inputImage->buffer, pixelCount*3, cudaMemcpyHostToDevice);
+    printf("4\n");
+    // Processing
+    dim3 blockSize = dim3(32,32);
+    int gridx, gridy;
+    printf("size of image: %d x %d\n", inputImage->width, inputImage->height);
+    printf("size of block: %d x %d\n", blockSize.x, blockSize.y);
+    if((inputImage->width)%(blockSize.x) == 0 ){
+        gridx = (inputImage->width)/(blockSize.x);
+    }
+    else{
+        gridx = (inputImage->width)/(blockSize.x) + 1;
+    }
+
+    if((inputImage->height)%(blockSize.y) == 0 ){
+        gridy = (inputImage->height)/(blockSize.y);
+    }
+    else{
+        gridy = (inputImage->height)/(blockSize.y) + 1;
+    }
+    
+    dim3 gridSize = dim3(gridx, gridy);
+    grayscale<<<gridSize, blockSize>>>(dev_in, dev_out);
+    printf("5\n");
+    // Copy CUDA Memory from GPU to CPU
+    cudaMemcpy( outputImage, dev_out, pixelCount*3, cudaMemcpyDeviceToHost);
+    printf("6\n");
+    // Cleaning
+    cudaFree(dev_in);
+    cudaFree(dev_out);
+    //free(outputImage);
+    printf("7\n");
 }
 
 void Labwork::labwork5_CPU() {
