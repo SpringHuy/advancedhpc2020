@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
             labwork.saveOutputImage("labwork4-gpu-out.jpg");
             break;
         case 5:
-            labwork.labwork5_CPU();
-            labwork.saveOutputImage("labwork5-cpu-out.jpg");
+            //labwork.labwork5_CPU();
+            //labwork.saveOutputImage("labwork5-cpu-out.jpg");
             labwork.labwork5_GPU(FALSE);
             labwork.saveOutputImage("labwork5-gpu-out.jpg");
             break;
@@ -278,11 +278,90 @@ void Labwork::labwork4_GPU() {
     printf("7\n");
 }
 
-void Labwork::labwork5_CPU() {
+__global__ void blur(uchar3 *input, uchar3 *output, int width, int height ) {
+    int tidx = threadIdx.x + blockIdx.x * blockDim.x;
+    int tidy = threadIdx.y + blockIdx.y * blockDim.y;
+    
 }
 
-void Labwork::labwork5_GPU(bool shared) {
+
+void Labwork::labwork5_CPU() {
+    int kernel[] = {0, 0, 1, 2, 1, 0, 0,
+                    0, 3, 13, 22, 13, 3, 0,
+                    1, 13, 59, 97, 59, 13, 1,
+                    2, 22, 97, 159, 97, 22, 2,
+                    1, 13, 59, 97, 59, 13, 1,
+                    0, 3, 13, 22, 13, 3, 0,
+                    0, 0, 1, 2, 1, 0, 0};
+
+    // Calculate number of pixels
+    int pixelCount = inputImage->width * inputImage->height;
+    outputImage = static_cast<char *>(malloc(pixelCount * sizeof(uchar3)));
+    for(int rows = 0; rows < inputImage->height; rows++) {
+        for (int columns = 0; columns < inputImage->width; columns++){
+            int sum = 0; // sum is for normalization
+            int constant = 0;
+            for(int y=-3; y <= 3; y++){
+                for(int x=-3; x <= 3; x++){
+                    int tempx = columns + x;
+                    int tempy = rows + y;
+                    if( tempx < 0 || tempx >= inputImage->width || tempy < 0 || tempy >= inputImage->height) continue;
+                    int tid = tempx + tempy*inputImage->width;
+                    char pixelValue = (char) (((int) inputImage->buffer[tid * 3] + (int) inputImage->buffer[tid * 3 + 1] +
+                                          (int) inputImage->buffer[tid * 3 + 2]) / 3);
+                    int coefficient = kernel[(y+3)*7+x+3];
+                    sum += pixelValue*coefficient;
+                    constant += coefficient;
+                }
+            }
+            sum /= constant;
+            int positionOut = rows*inputImage->width + columns;
+            if(positionOut < pixelCount){
+                outputImage[positionOut * 3] = outputImage[positionOut * 3 + 1] = outputImage[positionOut * 3 + 2] = sum;
+            }
+        }
+    }
+
 }
+
+
+void Labwork::labwork5_GPU(bool shared) {
+    int filw= 7;
+    int filter[] = {0, 0, 1, 2, 1, 0, 0,
+        0, 3, 13, 22, 13, 3, 0,
+        1, 13, 59, 97, 59, 13, 1,
+        2, 22, 97, 159, 97, 22, 2,
+        1, 13, 59, 97, 59, 13, 1,
+        0, 3, 13, 22, 13, 3, 0,
+        0, 0, 1, 2, 1, 0, 0
+    };
+    
+    int filsum = 0; 
+    for(int i=0; i<49; i++){
+        filsum += filter[i];
+    }
+    printf("filter sum: %d\n", filsum);
+
+    //padding
+    /* 
+    int nw = inputImage->width + (filw - 1)/2;
+    int nh = inputImage->height + (filw - 1)/2;
+    char* nbuffer = (char*) malloc(nw*nh*3);
+    for(int i=0; i<nh*nw*3; i++){
+        if(i<((filw - 1)/2)*nw*3){
+            nbuffer[i] = 0;
+            nbuffer++;            
+        }
+        for(int j=0; j<nw; j++){
+               
+        }
+    } */
+
+
+
+}
+
+
 
 void Labwork::labwork6_GPU() {
 }
