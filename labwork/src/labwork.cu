@@ -281,7 +281,7 @@ void Labwork::labwork4_GPU() {
 __global__ void blur(uchar3 *input, uchar3 *output, int width, int height ) {
     int tidx = threadIdx.x + blockIdx.x * blockDim.x;
     int tidy = threadIdx.y + blockIdx.y * blockDim.y;
-    
+
 }
 
 
@@ -292,7 +292,12 @@ void Labwork::labwork5_CPU() {
                     2, 22, 97, 159, 97, 22, 2,
                     1, 13, 59, 97, 59, 13, 1,
                     0, 3, 13, 22, 13, 3, 0,
-                    0, 0, 1, 2, 1, 0, 0};
+                    0, 0, 1, 2, 1, 0, 0
+                };
+    int filsum = 0; 
+    for(int i=0; i<49; i++){
+        filsum += kernel[i];
+    }
 
     // Calculate number of pixels
     int pixelCount = inputImage->width * inputImage->height;
@@ -300,7 +305,6 @@ void Labwork::labwork5_CPU() {
     for(int rows = 0; rows < inputImage->height; rows++) {
         for (int columns = 0; columns < inputImage->width; columns++){
             int sum = 0; // sum is for normalization
-            int constant = 0;
             for(int y=-3; y <= 3; y++){
                 for(int x=-3; x <= 3; x++){
                     int tempx = columns + x;
@@ -311,10 +315,9 @@ void Labwork::labwork5_CPU() {
                                           (int) inputImage->buffer[tid * 3 + 2]) / 3);
                     int coefficient = kernel[(y+3)*7+x+3];
                     sum += pixelValue*coefficient;
-                    constant += coefficient;
                 }
             }
-            sum /= constant;
+            sum /= filsum;
             int positionOut = rows*inputImage->width + columns;
             if(positionOut < pixelCount){
                 outputImage[positionOut * 3] = outputImage[positionOut * 3 + 1] = outputImage[positionOut * 3 + 2] = sum;
